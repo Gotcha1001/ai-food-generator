@@ -544,20 +544,15 @@ function RecipeImageSection({ recipe }) {
             setHasError(false);
 
             try {
-                // Get the recipe name
                 const recipeName = recipe.recipeData.recipeName;
                 console.log("Searching for recipe:", recipeName);
-
-                // Try Spoonacular API first
                 await fetchFromSpoonacular(recipeName);
             } catch (error) {
                 console.error("Error fetching image:", error);
                 try {
-                    // Fallback to Pexels if Spoonacular fails
                     await fetchFromPexels(recipe.recipeData.recipeName);
                 } catch (pexelsError) {
                     console.error("Error with Pexels fallback:", pexelsError);
-                    // Use placeholder as final fallback
                     setImageUrl(defaultImage);
                     setHasError(true);
                 }
@@ -567,10 +562,8 @@ function RecipeImageSection({ recipe }) {
         };
 
         const fetchFromSpoonacular = async (searchTerm) => {
-            // Get your API key from https://spoonacular.com/food-api
             const SPOONACULAR_API_KEY = import.meta.env.VITE_SPOONACULAR_API_KEY;
 
-            // Use Spoonacular's recipe search endpoint
             const response = await fetch(
                 `https://api.spoonacular.com/recipes/complexSearch?query=${encodeURIComponent(searchTerm)}&number=1&apiKey=${SPOONACULAR_API_KEY}`
             );
@@ -581,33 +574,23 @@ function RecipeImageSection({ recipe }) {
 
             const data = await response.json();
 
-            if (data.results && data.results.length > 0) {
-                console.log("Image found on Spoonacular:", data.results[0].image);
+            if (data.results?.length > 0) {
                 setImageUrl(data.results[0].image);
-                return true;
             } else {
-                console.log("No images found on Spoonacular");
                 throw new Error("No images found on Spoonacular");
             }
         };
 
         const fetchFromPexels = async (searchTerm) => {
-            // Simplify the search term by extracting main dish name
             const mainDishKeywords = searchTerm.split(' ');
-            const mainDishName = mainDishKeywords.length > 1 ?
-                mainDishKeywords.slice(-2).join(' ') :
-                searchTerm;
-
-            console.log("Simplified search term for Pexels:", mainDishName);
+            const mainDishName = mainDishKeywords.slice(-2).join(' ') || searchTerm;
 
             const PEXELS_API_KEY = import.meta.env.VITE_PEXELS_API_KEY;
 
             const response = await fetch(
                 `https://api.pexels.com/v1/search?query=${encodeURIComponent(mainDishName)}+food&per_page=3&size=medium`,
                 {
-                    headers: {
-                        'Authorization': PEXELS_API_KEY
-                    }
+                    headers: { 'Authorization': PEXELS_API_KEY }
                 }
             );
 
@@ -617,13 +600,11 @@ function RecipeImageSection({ recipe }) {
 
             const data = await response.json();
 
-            if (data.photos && data.photos.length > 0) {
-                console.log("Fallback image found from Pexels");
+            if (data.photos?.length > 0) {
                 setImageUrl(data.photos[0].src.medium);
-                return true;
+            } else {
+                throw new Error("No images found on Pexels");
             }
-
-            throw new Error("No images found on Pexels");
         };
 
         fetchImage();
@@ -632,25 +613,26 @@ function RecipeImageSection({ recipe }) {
     return (
         <div className="rounded-lg overflow-hidden shadow-md relative">
             {isLoading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
                     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
                 </div>
             )}
+
             <img
                 src={imageUrl}
                 alt={recipe.recipeData?.recipeName || "Recipe"}
-                className="w-full h-[500px] object-contain rounded-lg mb-4"
+                className="w-full h-[500px] object-cover rounded-lg mb-2"
                 onError={(e) => {
-                    console.log("Image failed to load, using default image");
-                    e.target.onerror = null; // Prevent infinite error loop
+                    e.target.onerror = null;
                     e.target.src = defaultImage;
                     setHasError(true);
                 }}
                 style={{ display: isLoading ? 'none' : 'block' }}
             />
+
             {hasError && !isLoading && (
-                <div className="flex items-center justify-center h-[500px] bg-gray-100 rounded-lg">
-                    <p className="text-gray-500">Image not available</p>
+                <div className="mt-1 text-sm text-gray-500 text-center px-4">
+                    Only available images will be shown. Otherwise, the recipe content is the main focus here.
                 </div>
             )}
         </div>
