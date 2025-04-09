@@ -528,14 +528,21 @@
 import { useState, useEffect } from 'react';
 
 function RecipeImageSection({ recipe }) {
-    const [imageUrl, setImageUrl] = useState('/placeholder2.jpg');
+    const defaultImage = '/placeholder2.jpg';
+    const [imageUrl, setImageUrl] = useState(defaultImage);
     const [isLoading, setIsLoading] = useState(true);
+    const [hasError, setHasError] = useState(false);
 
     useEffect(() => {
         const fetchImage = async () => {
-            if (!recipe.recipeData?.recipeName) return;
+            if (!recipe.recipeData?.recipeName) {
+                setIsLoading(false);
+                return;
+            }
 
             setIsLoading(true);
+            setHasError(false);
+
             try {
                 // Get the recipe name
                 const recipeName = recipe.recipeData.recipeName;
@@ -551,7 +558,8 @@ function RecipeImageSection({ recipe }) {
                 } catch (pexelsError) {
                     console.error("Error with Pexels fallback:", pexelsError);
                     // Use placeholder as final fallback
-                    setImageUrl('/placeholder2.jpg');
+                    setImageUrl(defaultImage);
+                    setHasError(true);
                 }
             } finally {
                 setIsLoading(false);
@@ -630,13 +638,21 @@ function RecipeImageSection({ recipe }) {
             )}
             <img
                 src={imageUrl}
-                alt="Recipe"
-                className="w-full h-[500px] object-contain rounded-lg mb-4" // Use object-contain to ensure the full image is visible
+                alt={recipe.recipeData?.recipeName || "Recipe"}
+                className="w-full h-[500px] object-contain rounded-lg mb-4"
                 onError={(e) => {
-                    e.target.onerror = null;
+                    console.log("Image failed to load, using default image");
+                    e.target.onerror = null; // Prevent infinite error loop
                     e.target.src = defaultImage;
+                    setHasError(true);
                 }}
+                style={{ display: isLoading ? 'none' : 'block' }}
             />
+            {hasError && !isLoading && (
+                <div className="flex items-center justify-center h-[500px] bg-gray-100 rounded-lg">
+                    <p className="text-gray-500">Image not available</p>
+                </div>
+            )}
         </div>
     );
 }
